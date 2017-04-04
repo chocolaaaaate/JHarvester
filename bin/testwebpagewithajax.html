@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div id="ajaxtest">
+<h1>Original Title Not Yet Modified By AJAX</h1>
+</div>
+
+<script>
+(function loadDoc() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("ajaxtest").innerHTML =
+      this.responseText;
+    }
+  };
+  xhttp.open("GET", "loadwithajax.txt", true);
+  xhttp.send();
+})();
+</script>
+
+</body>
+</html>

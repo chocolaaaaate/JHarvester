@@ -1,0 +1,3 @@
+https://www.noelleeming.co.nz/shop/games-gaming/nintendo-ds-nds/nintendo-consoles/nintendo-switch-gaming-console-grey/prod150775.html
+
+//*[@id="bd"]/div[1]/div/div[3]/div[3]/div[1]/div[1]/div/div[1]/span/span[2]

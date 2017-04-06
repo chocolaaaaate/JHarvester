@@ -9,6 +9,7 @@ import com.smk.jharvester.model.Entry;
 
 /**
  * {@link TableModel} for the {@link JTable} of entries.
+ * 
  * @author Sumedh Kanade
  *
  */
@@ -22,7 +23,7 @@ public class EntriesTableModel extends AbstractTableModel {
 
 	@Override
 	public int getColumnCount() {
-		return 5;
+		return 4;
 	}
 
 	@Override
@@ -35,8 +36,6 @@ public class EntriesTableModel extends AbstractTableModel {
 		case 2:
 			return "URL";
 		case 3:
-			return "XPath";
-		case 4:
 			return "Update frequency (mins)";
 		default:
 			return null;
@@ -60,14 +59,15 @@ public class EntriesTableModel extends AbstractTableModel {
 		case 2:
 			return e.getURL().toString();
 		case 3:
-			return e.getXPath();
-		case 4:
 			return new Integer(e.getUpdateFrequency()).toString();
 		default:
 			return null;
 		}
 	}
 
+	/**
+	 * 
+	 */
 	public void domainModelChanged() {
 		fireTableDataChanged();
 	}

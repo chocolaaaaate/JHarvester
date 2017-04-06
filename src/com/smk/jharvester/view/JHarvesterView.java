@@ -7,10 +7,16 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Observable;
 import java.util.Observer;
 
@@ -26,11 +32,14 @@ import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.table.TableModel;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
 import com.smk.jharvester.controller.EntriesController;
 
 /**
@@ -42,12 +51,16 @@ import com.smk.jharvester.controller.EntriesController;
  */
 public class JHarvesterView implements Observer {
 
+	private static final String ENTRIES_JSON_FILENAME = "entries.json";
 	private EntriesController controller;
 	private JFrame mainFrame;
 	private EntriesTableModel entriesTableModel;
+	private JProgressBar pbFetch;
+	private JTable jtEntries;
 
 	public JHarvesterView(EntriesController controller) {
 		this.controller = controller;
+
 		this.controller.addObserver(this);
 		this.entriesTableModel = new EntriesTableModel(controller);
 	}
@@ -57,6 +70,7 @@ public class JHarvesterView implements Observer {
 	 */
 	public void init() {
 		javax.swing.SwingUtilities.invokeLater(new Runnable() {
+
 			public void run() {
 				try {
 					UIManager.setLookAndFeel(
@@ -74,34 +88,60 @@ public class JHarvesterView implements Observer {
 
 				// TODO: Load list of entries from JSON file (using GSON).
 
-				// TODO: Save the current list of entries on close in JSON
-				// format.
 				mainFrame.addWindowListener(new WindowAdapter() {
 					@Override
 					public void windowClosing(WindowEvent e) {
-						System.out.println(new GsonBuilder().create()
-								.toJson(controller.getAllEntries()));
+						// TODO: Save the current list of entries on close in
+						// JSON format.
+						saveEntriesToJsonFile();
 						super.windowClosing(e);
 					}
+
 				});
 
-				/*
-				 * CENTRAL PANEL - table of entries
-				 */
-				JTable table = new JTable(entriesTableModel);
-				JScrollPane spTable = new JScrollPane(table);
+				jtEntries = new JTable(entriesTableModel);
+				jtEntries.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+				JScrollPane spTable = new JScrollPane(jtEntries);
 				JPanel pTable = new JPanel();
 				pTable.add(spTable);
 				spTable.setPreferredSize(new Dimension(950,
 						(int) spTable.getPreferredSize().getHeight()));
 				int tableWidth = (int) spTable.getPreferredSize().getWidth();
+				jtEntries.addKeyListener(new KeyListener() {
+
+					@Override
+					public void keyTyped(KeyEvent e) {
+					}
+
+					@Override
+					public void keyReleased(KeyEvent e) {
+						if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+							int userChoiceDelEntry = JOptionPane
+									.showConfirmDialog(mainFrame,
+											"Are you sure you want to delete this entry?",
+											"Delete", JOptionPane.YES_NO_OPTION,
+											JOptionPane.QUESTION_MESSAGE);
+							if (userChoiceDelEntry == JOptionPane.YES_OPTION) {
+								System.out.println("Deleting row at index = "
+										+ jtEntries.getSelectedRow());
+								controller.deleteEntry(
+										jtEntries.getSelectedRow());
+							}
+
+						}
+					}
+
+					@Override
+					public void keyPressed(KeyEvent e) {
+					}
+				});
 
 				/*
 				 * SOUTH PANEL - status bar
 				 */
 				JPanel pStatus = new JPanel(new BorderLayout());
 				pStatus.setBorder(BorderFactory.createEmptyBorder(0, 5, 5, 5));
-				JProgressBar pbFetch = new JProgressBar();
+				pbFetch = new JProgressBar();
 				pbFetch.setString("Ready");
 				pbFetch.setStringPainted(true);
 				pStatus.add(pbFetch, BorderLayout.CENTER);
@@ -156,7 +196,7 @@ public class JHarvesterView implements Observer {
 							@Override
 							protected void done() {
 								pbFetch.setValue(pbFetch.getMinimum());
-								pbFetch.setString("Request was successful.");
+								pbFetch.setString("Ready");
 								pbFetch.setIndeterminate(false);
 								bAddEntry.setEnabled(true);
 								super.done();
@@ -171,10 +211,13 @@ public class JHarvesterView implements Observer {
 									pbFetch.setString(
 											"Please wait while your request is being fetched.");
 
-									// TODO: replace default update frequency
 									controller.createEntry(tfLabel.getText(),
 											tfURL.getText(), tfXPath.getText(),
 											getUpdateFrequencyInMinutes());
+
+									tfLabel.setText("");
+									tfURL.setText("");
+									tfXPath.setText("");
 
 								} catch (MalformedURLException e) {
 									JOptionPane.showMessageDialog(mainFrame,
@@ -230,6 +273,14 @@ public class JHarvesterView implements Observer {
 				northPanel.add(pAddEntryFields, BorderLayout.CENTER);
 				northPanel.add(bAddEntry, BorderLayout.EAST);
 
+				// JMenuBar jmb = createMenuBar();
+				// mainFrame.setJMenuBar(jmb);
+
+				/*
+				 * Load entries last saved on exit.
+				 */
+				loadEntriesFromJsonFile();
+
 				mainFrame.setLayout(new BorderLayout(5, 5));
 				mainFrame.add(northPanel, BorderLayout.NORTH);
 				mainFrame.add(pTable, BorderLayout.CENTER);
@@ -244,7 +295,94 @@ public class JHarvesterView implements Observer {
 	}
 
 	/**
-	 * Propogate update event to underlying {@link TableModel}
+	 * Asynchronously load entries from JSON file. Show progress via
+	 * JProgressBar.
+	 */
+	private void loadEntriesFromJsonFile() {
+		SwingWorker<Void, Void> backgroundThreadToLoadEntriesFromFile = new SwingWorker<Void, Void>() {
+
+			@Override
+			protected void done() {
+				pbFetch.setValue(pbFetch.getMaximum());
+				pbFetch.setString("All entries loaded.");
+				pbFetch.setIndeterminate(false);
+				jtEntries.setEnabled(true);
+				super.done();
+			}
+
+			@Override
+			protected Void doInBackground() {
+				pbFetch.setValue(0);
+				pbFetch.setIndeterminate(true);
+				pbFetch.setString("Finding entries file...");
+
+				Gson gson = new Gson();
+				JsonReader reader;
+				try {
+					reader = new JsonReader(
+							new FileReader(ENTRIES_JSON_FILENAME));
+					JSONEntry[] data = gson.fromJson(reader, JSONEntry[].class);
+
+					pbFetch.setIndeterminate(false);
+					pbFetch.setString("File found");
+
+					pbFetch.setMinimum(0);
+					pbFetch.setMaximum(data.length);
+
+					jtEntries.setEnabled(false);
+
+					for (int i = 0; i < data.length; i++) {
+						pbFetch.setString("Loading entry " + (i + 1) + " of "
+								+ data.length + "...");
+						JSONEntry je = data[i];
+						controller.createEntry(je.label, je.url.toString(),
+								je.xPath, je.updateFrequencyInMinutes);
+						pbFetch.setValue(i + 1);
+					}
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				return null;
+			}
+		};
+		backgroundThreadToLoadEntriesFromFile.execute();
+	}
+
+	/**
+	 * Container class for parsing from JSON file using GSON JSONReader
+	 */
+	private static class JSONEntry {
+		private URL url;
+		private String xPath;
+		private int updateFrequencyInMinutes;
+		private String label;
+	}
+
+	/**
+	 * Save entries in the table into a JSON file using Google's GSON library.
+	 */
+	private void saveEntriesToJsonFile() {
+		BufferedWriter writer = null;
+		try {
+			writer = new BufferedWriter(new FileWriter(ENTRIES_JSON_FILENAME));
+			writer.write(new GsonBuilder().create()
+					.toJson(controller.getAllEntries()));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} finally {
+			try {
+				writer.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * Propagate update event to underlying {@link TableModel}
 	 */
 	@Override
 	public void update(Observable o, Object arg) {

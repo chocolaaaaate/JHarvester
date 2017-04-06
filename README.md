@@ -7,7 +7,7 @@ Can handle pages that have AJAX; however, does not support pages that require au
 The code was developed in a test-driven way and employs the MVC design pattern.
 
 Uses the following external libraries:
-- [htmlunit](https://github.com/htmlunit) by Gargoyle Software Inc. licensed under Apache License, Version 2.0.
+- [htmlunit](https://github.com/htmlunit) by Gargoyle Software, Inc. licensed under Apache License, Version 2.0.
 - [GSON](https://github.com/google/gson) by Google, Inc. licensed under Apache License, Version 2.0.
 
 Author: Sumedh Kanade, 2017.

@@ -33,7 +33,7 @@ public class JHarvester {
 	 * TODO: disallow duplicate entry creation in EntriesController based on
 	 * Entry.equals() method (i.e. only considering url and xpath equality)
 	 * 
-	 * TODO: add an "update all" button
+	 * TODO: add an "updateIfDue all" button
 	 */
 
 	/**

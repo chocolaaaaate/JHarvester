@@ -1,11 +1,14 @@
 /**
- * 
+ *
  */
 package com.smk.jharvester.model;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -22,203 +25,217 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
  * XPath of the HTML element to track; and, the frequency (in minutes) of
  * updating the value of the tracked element.
  * </p>
- * 
+ * <p>
  * <p>
  * Uses <a href="http://htmlunit.sourceforge.net/">htmlunit</a> by Gargoyle
  * Software Inc. under Apache License, Version 2.0.
  * </p>
- * 
+ *
  * @author Sumedh Kanade
  * @version 1.0
  */
 public class Entry {
 
-	/**
-	 * The URL of the page on which the XPath is to be evaluated.
-	 */
-	private URL url;
+    /**
+     * The URL of the page on which the XPath is to be evaluated.
+     */
+    private URL url;
 
-	/**
-	 * The XPath of the element of interest on the page located at this.url
-	 */
-	private String xPath;
+    /**
+     * The XPath of the element of interest on the page located at this.url
+     */
+    private String xPath;
 
-	/**
-	 * The frequency in minutes at which the XPath should be re-evaluated. NOTE:
-	 * {@link Entry} does <em>not</em> do this periodic re-evaluation itself.
-	 */
-	private int updateFrequencyInMinutes;
+    /**
+     * The frequency in minutes at which the XPath should be re-evaluated. NOTE:
+     * {@link Entry} does <em>not</em> do this periodic re-evaluation itself.
+     */
+    private int updateFrequencyInMinutes;
 
-	/**
-	 * The value after this.xPath was evaluated for this.url in the most recent
-	 * setXPath(..) or fetchValue(..) call on this {@link Entry}.
-	 */
-	private String value;
+    /**
+     * The value after this.xPath was evaluated for this.url in the most recent
+     * setXPath(..) or fetchValue(..) call on this {@link Entry}.
+     */
+    private String value;
 
-	/**
-	 * This entry's label
-	 */
-	private String label;
+    /**
+     * This entry's label
+     */
+    private String label;
 
-	/**
-	 * Create an {@link Entry}.
-	 * 
-	 * @param url
-	 *            The URL of the page on which the XPath is to be evaluated.
-	 * @param xPath
-	 *            The XPath of the element of interest on the page located at
-	 *            this.url. Invalid XPath values will be rejected and an
-	 *            exception will be thrown.
-	 * @param knownValidXpathExampleForPlainHtmlPage
-	 * @param updateFrequency
-	 *            The frequency in minutes at which the XPath should be
-	 *            re-evaluated. NOTE: {@link Entry} does <em>not</em> do this
-	 *            periodic re-evaluation itself.
-	 * @throws FailingHttpStatusCodeException
-	 * @throws IOException
-	 */
-	public Entry(String label, String url, String xPath, int updateFrequency)
-			throws FailingHttpStatusCodeException, IOException {
-		this.label = label;
-		this.url = new URL(url);
-		setXPath(xPath);
-		this.updateFrequencyInMinutes = updateFrequency;
-	}
+    /**
+     * Date and time when this entry was last updated
+     */
+    private LocalDateTime lastUpdated;
 
-	public Object getURL() {
-		return this.url;
-	}
+    /**
+     * Create an {@link Entry}.
+     *
+     * @param label           Label of this entry.
+     * @param url             The URL of the page on which the XPath is to be evaluated.
+     * @param xPath           The XPath of the element of interest on the page located at
+     *                        this.url. Invalid XPath values will be rejected and an
+     *                        exception will be thrown.
+     * @param updateFrequency The frequency in minutes at which the XPath should be
+     *                        re-evaluated. NOTE: {@link Entry} does <em>not</em> do this
+     *                        periodic re-evaluation itself.
+     * @throws FailingHttpStatusCodeException
+     * @throws IOException
+     */
+    public Entry(String label, String url, String xPath, int updateFrequency)
+            throws FailingHttpStatusCodeException, IOException {
+        this.label = label;
+        this.url = new URL(url);
+        setXPath(xPath);
+        this.updateFrequencyInMinutes = updateFrequency;
+    }
 
-	public String getXPath() {
-		return this.xPath;
-	}
+    public Object getURL() {
+        return this.url;
+    }
 
-	/**
-	 * Get update frequency in minutes.
-	 * 
-	 * @return update frequency in minutes.
-	 */
-	public int getUpdateFrequency() {
-		return this.updateFrequencyInMinutes;
-	}
+    public String getXPath() {
+        return this.xPath;
+    }
 
-	public void setURL(String urlString) throws MalformedURLException {
-		setURL(new URL(urlString));
-	}
+    /**
+     * Get updateIfDue frequency in minutes.
+     *
+     * @return updateIfDue frequency in minutes.
+     */
+    public int getUpdateFrequency() {
+        return this.updateFrequencyInMinutes;
+    }
 
-	public void setURL(URL url) {
-		this.url = url;
-	}
+    public synchronized void setURL(String urlString) throws MalformedURLException {
+        setURL(new URL(urlString));
+    }
 
-	/**
-	 * Attempts to set the XPath of this {@link Entry}.
-	 * 
-	 * <p>
-	 * This method call will cause evaluation this.xPath on the page located at
-	 * this.url using <a href="http://htmlunit.sourceforge.net/">htmlunit</a> by
-	 * Gargoyle Software Inc. Used under Apache License, Version 2.0.
-	 * </p>
-	 * 
-	 * <p>
-	 * Uses {@link NicelyResynchronizingAjaxController} to evaluate the XPath
-	 * after any AJAX on the page has finished its work.
-	 * </p>
-	 * 
-	 * <p>
-	 * Invalid XPath value will be rejected via an exception as per htmlunit
-	 * behavior. See htmlunit docs for details.
-	 * </p>
-	 * 
-	 * @param xPath
-	 *            new XPath
-	 * @throws FailingHttpStatusCodeException
-	 * @throws MalformedURLException
-	 * @throws IOException
-	 */
-	public void setXPath(String xPath) throws FailingHttpStatusCodeException,
-			MalformedURLException, IOException {
-		this.xPath = xPath;
-		/*
-		 * Evaluating when XPath is to a) avoid having to make a costly
+    public synchronized void setURL(URL url) {
+        this.url = url;
+    }
+
+    /**
+     * Attempts to set the XPath of this {@link Entry}.
+     * <p>
+     * <p>
+     * This method call will cause evaluation this.xPath on the page located at
+     * this.url using <a href="http://htmlunit.sourceforge.net/">htmlunit</a> by
+     * Gargoyle Software Inc. Used under Apache License, Version 2.0.
+     * </p>
+     * <p>
+     * <p>
+     * Uses {@link NicelyResynchronizingAjaxController} to evaluate the XPath
+     * after any AJAX on the page has finished its work.
+     * </p>
+     * <p>
+     * <p>
+     * Invalid XPath value will be rejected via an exception as per htmlunit
+     * behavior. See htmlunit docs for details.
+     * </p>
+     *
+     * @param xPath new XPath
+     * @throws FailingHttpStatusCodeException
+     * @throws MalformedURLException
+     * @throws IOException
+     */
+    public synchronized void setXPath(String xPath) throws FailingHttpStatusCodeException,
+            MalformedURLException, IOException {
+        this.xPath = xPath;
+        /*
+         * Evaluating when XPath is to a) avoid having to make a costly
 		 * evaluation each time getValue() is called; and b) reject an invalid
 		 * XPath right away.
 		 */
-		this.value = evaluateXPath();
-	}
+        this.value = evaluateXPath();
+    }
 
-	/**
-	 * <p>
-	 * Evaluates this.xPath on the page located at this.url using
-	 * <a href="http://htmlunit.sourceforge.net/">htmlunit</a> by Gargoyle
-	 * Software Inc. Used under Apache License, Version 2.0.
-	 * </p>
-	 * 
-	 * <p>
-	 * Uses {@link NicelyResynchronizingAjaxController} to evaluate the XPath
-	 * after any AJAX on the page has finished its work.
-	 * </p>
-	 * 
-	 * @return String value of the xPath evaluation.
-	 * @throws FailingHttpStatusCodeException
-	 * @throws MalformedURLException
-	 * @throws IOException
-	 */
-	private String evaluateXPath() throws FailingHttpStatusCodeException,
-			MalformedURLException, IOException {
-		java.util.logging.Logger.getLogger("com.gargoylesoftware")
-				.setLevel(Level.OFF);
-		WebClient webClient = new WebClient(BrowserVersion.getDefault());
-		webClient.getOptions().setJavaScriptEnabled(true);
-		webClient.getOptions().setThrowExceptionOnScriptError(false);
-		webClient.getOptions().setCssEnabled(false);
-		// dealing with any AJAX on the page
-		webClient.setAjaxController(new NicelyResynchronizingAjaxController());
+    /**
+     * <p>
+     * Evaluates this.xPath on the page located at this.url using
+     * <a href="http://htmlunit.sourceforge.net/">htmlunit</a> by Gargoyle
+     * Software Inc. Used under Apache License, Version 2.0.
+     * </p>
+     * <p>
+     * <p>
+     * Uses {@link NicelyResynchronizingAjaxController} to evaluate the XPath
+     * after any AJAX on the page has finished its work.
+     * </p>
+     *
+     * @return String value of the xPath evaluation.
+     * @throws FailingHttpStatusCodeException
+     * @throws MalformedURLException
+     * @throws IOException
+     */
+    private String evaluateXPath() throws FailingHttpStatusCodeException,
+            MalformedURLException, IOException {
 
-		HtmlPage page = webClient.getPage(this.url);
-		webClient.close(); // important
-		List<HtmlElement> xpathResult = page.getByXPath(this.xPath);
-		return xpathResult.get(0).getFirstChild().getTextContent();
-	}
+        java.util.logging.Logger.getLogger("com.gargoylesoftware")
+                .setLevel(Level.OFF);
+        WebClient webClient = new WebClient(BrowserVersion.getDefault());
+        webClient.getOptions().setJavaScriptEnabled(true);
+        webClient.getOptions().setThrowExceptionOnScriptError(false);
+        webClient.getOptions().setCssEnabled(false);
+        // dealing with any AJAX on the page
+        webClient.setAjaxController(new NicelyResynchronizingAjaxController());
 
-	/**
-	 * Sets the update frequency (in minutes).
-	 * 
-	 * @param updateFrequency
-	 *            new update frequency in minutes.
-	 */
-	public void setUpdateFrequency(int updateFrequency) {
-		this.updateFrequencyInMinutes = updateFrequency;
-	}
+        HtmlPage page = webClient.getPage(this.url);
+        webClient.close(); // important
+        List<HtmlElement> xpathResult = page.getByXPath(this.xPath);
+        return xpathResult.get(0).getFirstChild().getTextContent();
+    }
 
-	/**
-	 * Returns the most recent value obtained by evaluating this.xPath on the
-	 * page at this.url.
-	 * 
-	 * @return String value of the xPath evaluation.
-	 */
-	public String getValue() {
-		return this.value;
-	}
+    /**
+     * Sets the updateIfDue frequency (in minutes).
+     *
+     * @param updateFrequency new updateIfDue frequency in minutes.
+     */
+    public synchronized void setUpdateFrequency(int updateFrequency) {
+        this.updateFrequencyInMinutes = updateFrequency;
+    }
 
-	/**
-	 * Two Entries are equal if and only if their URL and XPath are equal. Equal
-	 * labels and update frequencies are NOT required for equality.
-	 */
-	@Override
-	public boolean equals(Object obj) {
-		if (!(obj instanceof Entry)) {
-			return false;
-		}
-		Entry other = (Entry) obj;
-		return this.url.equals(other.getURL())
-				&& this.xPath.equals(other.getXPath());
-	}
+    /**
+     * Returns the most recent value obtained by evaluating this.xPath on the
+     * page at this.url.
+     *
+     * @return String value of the xPath evaluation.
+     */
+    public String getValue() {
+        return this.value;
+    }
 
-	public String getLabel() {
-		return this.label;
-	}
+    /**
+     * Two Entries are equal if and only if their URL and XPath are equal. Equal
+     * labels and updateIfDue frequencies are NOT required for equality.
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Entry)) {
+            return false;
+        }
+        Entry other = (Entry) obj;
+        return this.url.equals(other.getURL())
+                && this.xPath.equals(other.getXPath());
+    }
 
-	public void setLabel(String newLabel) {
-		this.label = newLabel;
-	}
+    public String getLabel() {
+        return this.label;
+    }
+
+    public synchronized void setLabel(String newLabel) {
+        this.label = newLabel;
+    }
+
+    public LocalDateTime getLastUpdated() {
+        return this.lastUpdated;
+    }
+
+    public synchronized void updateIfDue() throws IOException {
+        LocalDateTime now = LocalDateTime.now();
+        if ((this.lastUpdated == null) || now.isAfter(this.lastUpdated.plusMinutes(this.updateFrequencyInMinutes)) ||
+                now.isEqual(this.lastUpdated.plusMinutes(this.updateFrequencyInMinutes))) {
+            this.value = evaluateXPath();
+            this.lastUpdated = now;
+        }
+    }
 }

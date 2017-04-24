@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.smk.jharvester.view;
 
 import java.awt.BorderLayout;
@@ -21,21 +18,7 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 
-import javax.swing.BorderFactory;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTable;
-import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
-import javax.swing.SwingWorker;
-import javax.swing.UIManager;
+import javax.swing.*;
 import javax.swing.table.TableModel;
 
 import com.google.gson.Gson;
@@ -93,14 +76,15 @@ public class JHarvesterView implements Observer {
 
                 // Create and set up the window.
                 mainFrame = new JFrame("JHarvester");
-                mainFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                mainFrame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
-                // TODO: Load list of entries from JSON file (using GSON).
-
+                /*
+                 * save current entries to file before closing
+                 */
                 mainFrame.addWindowListener(new WindowAdapter() {
                     @Override
                     public void windowClosing(WindowEvent e) {
-                        // JSON format.
+                        System.out.println("Saving entries to file (JSON)");
                         saveEntriesToJsonFile();
                         super.windowClosing(e);
                     }
@@ -115,6 +99,10 @@ public class JHarvesterView implements Observer {
                 spTable.setPreferredSize(new Dimension(950,
                         (int) spTable.getPreferredSize().getHeight()));
                 int tableWidth = (int) spTable.getPreferredSize().getWidth();
+
+                /*
+                 * Deleting entries by hitting the DELETE key on a row.
+                 */
                 jtEntries.addKeyListener(new KeyListener() {
 
                     @Override
@@ -187,7 +175,7 @@ public class JHarvesterView implements Observer {
                 // click event handler
                 String[] frequencyOptions = new String[]{" Update Frequency ",
                         "Continuous", "Hourly", "Daily", "Weekly"};
-                jcbUpdateFrequency = new JComboBox<String>(
+                jcbUpdateFrequency = new JComboBox(
                         frequencyOptions);
 
                 pAddEntryFields.add(pLabel);
@@ -282,11 +270,8 @@ public class JHarvesterView implements Observer {
                 northPanel.add(pAddEntryFields, BorderLayout.CENTER);
                 northPanel.add(bAddEntry, BorderLayout.EAST);
 
-                // JMenuBar jmb = createMenuBar();
-                // mainFrame.setJMenuBar(jmb);
-
 				/*
-				 * Load entries last saved on exit.
+                 * Load entries last saved on exit.
 				 */
                 loadEntriesFromJsonFile();
 
@@ -303,12 +288,13 @@ public class JHarvesterView implements Observer {
         });
     }
 
-    private void setEnableAddNewEntryPanel(boolean enabled) {
+    private void setEnabledForEditingUIElements(boolean enabled) {
         tfLabel.setEnabled(enabled);
         tfURL.setEnabled(enabled);
         tfXPath.setEnabled(enabled);
         jcbUpdateFrequency.setEnabled(enabled);
         bAddEntry.setEnabled(enabled);
+        jtEntries.setEnabled(enabled);
     }
 
     /**
@@ -318,17 +304,18 @@ public class JHarvesterView implements Observer {
     private void loadEntriesFromJsonFile() {
         SwingWorker<Void, Void> backgroundThreadToLoadEntriesFromFile = new SwingWorker<Void, Void>() {
 
+            /**
+             * Finished loading entries from file. Re-enable UI elements that allow editing of the entries collection.
+             */
             @Override
             protected void done() {
                 pbFetch.setValue(pbFetch.getMaximum());
                 pbFetch.setString("All entries loaded.");
                 pbFetch.setIndeterminate(false);
-                jtEntries.setEnabled(true);
 
-                setEnableAddNewEntryPanel(true);
+                setEnabledForEditingUIElements(true);
 
                 /*
-                 * TODO check if this is right
                  * start background updateIfDue thread AFTER all entries are loaded.
                  */
                 controller.startUpdateThread();
@@ -336,13 +323,17 @@ public class JHarvesterView implements Observer {
                 super.done();
             }
 
+            /**
+             * Load JSON entries from file in the background. Disable fields that allow
+             * editing of entries collection while this operation is underway.
+             */
             @Override
             protected Void doInBackground() {
                 pbFetch.setValue(0);
                 pbFetch.setIndeterminate(true);
                 pbFetch.setString("Finding entries file...");
 
-                setEnableAddNewEntryPanel(false);
+                setEnabledForEditingUIElements(false);
 
                 Gson gson = new Gson();
                 JsonReader reader;
@@ -357,8 +348,6 @@ public class JHarvesterView implements Observer {
                     pbFetch.setMinimum(0);
                     pbFetch.setMaximum(data.length);
 
-                    jtEntries.setEnabled(false);
-
                     for (int i = 0; i < data.length; i++) {
                         pbFetch.setString("Loading entry " + (i + 1) + " of "
                                 + data.length + "...");
@@ -368,8 +357,10 @@ public class JHarvesterView implements Observer {
                         pbFetch.setValue(i + 1);
                     }
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(mainFrame,
+                            "There was a problem while loading previously saved entries from the file system.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
                 return null;
             }
@@ -399,16 +390,20 @@ public class JHarvesterView implements Observer {
                 writer.write(new GsonBuilder().create()
                         .toJson(allEntries));
             } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+                JOptionPane.showMessageDialog(mainFrame,
+                        "There was a problem while auto-saving entries to file.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
             } finally {
                 try {
                     if (writer != null) {
                         writer.close();
                     }
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(mainFrame,
+                            "There was a problem while auto-saving entries to file.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
             }
         }

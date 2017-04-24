@@ -1,6 +1,3 @@
-/**
- *
- */
 package com.smk.jharvester.model;
 
 import java.io.IOException;
@@ -50,7 +47,7 @@ public class Entry {
      * The frequency in minutes at which the XPath should be re-evaluated. NOTE:
      * {@link Entry} does <em>not</em> do this periodic re-evaluation itself.
      */
-    private int updateFrequencyInMinutes;
+    private long updateFrequencyInMinutes;
 
     /**
      * The value after this.xPath was evaluated for this.url in the most recent
@@ -103,7 +100,7 @@ public class Entry {
      *
      * @return updateIfDue frequency in minutes.
      */
-    public int getUpdateFrequency() {
+    public long getUpdateFrequency() {
         return this.updateFrequencyInMinutes;
     }
 
@@ -190,7 +187,7 @@ public class Entry {
      *
      * @param updateFrequency new updateIfDue frequency in minutes.
      */
-    public synchronized void setUpdateFrequency(int updateFrequency) {
+    public synchronized void setUpdateFrequency(long updateFrequency) {
         this.updateFrequencyInMinutes = updateFrequency;
     }
 
@@ -230,6 +227,12 @@ public class Entry {
         return this.lastUpdated;
     }
 
+    /**
+     * Re-evaluates the value of this entry if due. Re-evaluation is due if time since
+     * last update is more than or equal to update frequency.
+     *
+     * @throws IOException
+     */
     public synchronized void updateIfDue() throws IOException {
         LocalDateTime now = LocalDateTime.now();
         if ((this.lastUpdated == null) || now.isAfter(this.lastUpdated.plusMinutes(this.updateFrequencyInMinutes)) ||

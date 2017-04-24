@@ -59,7 +59,7 @@ public class EntriesTableModel extends AbstractTableModel {
 		case 2:
 			return e.getURL().toString();
 		case 3:
-			return new Integer(e.getUpdateFrequency()).toString();
+			return new Long(e.getUpdateFrequency()).toString();
 		default:
 			return null;
 		}

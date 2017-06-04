@@ -51,7 +51,6 @@ public class JHarvesterView implements Observer {
 
     public JHarvesterView(EntriesController controller) {
         this.controller = controller;
-
         this.controller.addObserver(this);
         this.entriesTableModel = new EntriesTableModel(controller);
     }
@@ -111,19 +110,18 @@ public class JHarvesterView implements Observer {
 
                     @Override
                     public void keyReleased(KeyEvent e) {
-                        if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+                        if ((e.getKeyCode() == KeyEvent.VK_DELETE) && (jtEntries.getSelectedRow() >= 0)){
                             int userChoiceDelEntry = JOptionPane
                                     .showConfirmDialog(mainFrame,
                                             "Are you sure you want to delete this entry?",
                                             "Delete", JOptionPane.YES_NO_OPTION,
                                             JOptionPane.QUESTION_MESSAGE);
-                            if (userChoiceDelEntry == JOptionPane.YES_OPTION) {
+                            if ((userChoiceDelEntry == JOptionPane.YES_OPTION) && (jtEntries.getSelectedRow() >= 0)) {
                                 System.out.println("Deleting row at index = "
                                         + jtEntries.getSelectedRow());
                                 controller.deleteEntry(
                                         jtEntries.getSelectedRow());
                             }
-
                         }
                     }
 

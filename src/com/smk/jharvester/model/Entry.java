@@ -47,7 +47,7 @@ public class Entry {
      * The frequency in minutes at which the XPath should be re-evaluated. NOTE:
      * {@link Entry} does <em>not</em> do this periodic re-evaluation itself.
      */
-    private long updateFrequencyInMinutes;
+    private int updateFrequencyInMinutes;
 
     /**
      * The value after this.xPath was evaluated for this.url in the most recent
@@ -100,7 +100,7 @@ public class Entry {
      *
      * @return updateIfDue frequency in minutes.
      */
-    public long getUpdateFrequency() {
+    public int getUpdateFrequency() {
         return this.updateFrequencyInMinutes;
     }
 
@@ -187,7 +187,7 @@ public class Entry {
      *
      * @param updateFrequency new updateIfDue frequency in minutes.
      */
-    public synchronized void setUpdateFrequency(long updateFrequency) {
+    public synchronized void setUpdateFrequency(int updateFrequency) {
         this.updateFrequencyInMinutes = updateFrequency;
     }
 

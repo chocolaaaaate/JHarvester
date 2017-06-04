@@ -29,7 +29,6 @@ public class EntriesController extends Observable {
             @Override
             public void run() {
                 synchronized (entries) {
-                    System.out.println("in synchronized block to updateIfDue all entries");
                     for (Entry entry : entries) {
                         try {
                             entry.updateIfDue();

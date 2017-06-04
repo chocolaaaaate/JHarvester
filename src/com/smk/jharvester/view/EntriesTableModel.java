@@ -7,6 +7,9 @@ import javax.swing.table.TableModel;
 import com.smk.jharvester.controller.EntriesController;
 import com.smk.jharvester.model.Entry;
 
+import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
+
 /**
  * {@link TableModel} for the {@link JTable} of entries.
  * 
@@ -23,7 +26,7 @@ public class EntriesTableModel extends AbstractTableModel {
 
 	@Override
 	public int getColumnCount() {
-		return 4;
+		return 5;
 	}
 
 	@Override
@@ -36,7 +39,9 @@ public class EntriesTableModel extends AbstractTableModel {
 		case 2:
 			return "URL";
 		case 3:
-			return "Update frequency (mins)";
+			return "Update frequency";
+		case 4:
+			return "Last updated";
 		default:
 			return null;
 		}
@@ -59,14 +64,34 @@ public class EntriesTableModel extends AbstractTableModel {
 		case 2:
 			return e.getURL().toString();
 		case 3:
-			return new Long(e.getUpdateFrequency()).toString();
+			return getUpdateFrequencyString(e.getUpdateFrequency());
+		case 4:
+			return e.getLastUpdated() == null ? "" : e.getLastUpdated().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 		default:
 			return null;
 		}
 	}
 
+
+	private static String getUpdateFrequencyString(int updateFreq) {
+		switch (updateFreq) {
+			case 0:
+				return "Continous";
+			case 30:
+				return "Half-hourly";
+			case 60:
+				return "Hourly";
+			case 60 * 24:
+				return "Daily";
+			case 60 * 24 * 7:
+				return "Weekly";
+			default:
+				return "" + updateFreq;
+		}
+	}
+
 	/**
-	 * 
+	 * Fires table data changed event, causing the JTable to be updated.
 	 */
 	public void domainModelChanged() {
 		fireTableDataChanged();

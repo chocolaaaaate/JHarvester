@@ -14,6 +14,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
@@ -36,6 +37,10 @@ import com.smk.jharvester.model.Entry;
 public class JHarvesterView implements Observer {
 
     private static final String ENTRIES_JSON_FILENAME = "entries.json";
+    private static final String ALL_ENTRIES_LOADED = "All entries loaded.";
+    private static final String CONNECTION_DOWN_ERROR_STRING = "Status: Connection down. Unable to update entries.";
+    private static final String CONNECTION_UP_STRING = "Status: Connected";
+
     private EntriesController controller;
     private JFrame mainFrame;
     private EntriesTableModel entriesTableModel;
@@ -308,7 +313,7 @@ public class JHarvesterView implements Observer {
             @Override
             protected void done() {
                 pbFetch.setValue(pbFetch.getMaximum());
-                pbFetch.setString("All entries loaded.");
+                pbFetch.setString(ALL_ENTRIES_LOADED);
                 pbFetch.setIndeterminate(false);
 
                 setEnabledForEditingUIElements(true);
@@ -354,9 +359,15 @@ public class JHarvesterView implements Observer {
                                 je.xPath, je.updateFrequencyInMinutes);
                         pbFetch.setValue(i + 1);
                     }
+                } catch (UnknownHostException e){
+                    // Possible network error...
+                    JOptionPane.showMessageDialog(mainFrame,
+                            "There was a problem loading previously saved entries.\nPlease check your internet connection.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
                 } catch (IOException e) {
                     JOptionPane.showMessageDialog(mainFrame,
-                            "There was a problem while loading previously saved entries from the file system.",
+                            "There was a problem loading previously saved entries.",
                             "Error",
                             JOptionPane.ERROR_MESSAGE);
                 }
@@ -412,7 +423,16 @@ public class JHarvesterView implements Observer {
      */
     @Override
     public void update(Observable o, Object arg) {
-        this.entriesTableModel.domainModelChanged();
+        if(arg != null && (arg instanceof IOException)){
+            this.pbFetch.setString(CONNECTION_DOWN_ERROR_STRING);
+        } else {
+            if(this.pbFetch.getString().equals(CONNECTION_DOWN_ERROR_STRING)){
+                this.pbFetch.setString(CONNECTION_UP_STRING);
+            } else if (this.pbFetch.getString().equals(ALL_ENTRIES_LOADED)){
+                this.pbFetch.setString(CONNECTION_UP_STRING);
+            }
+            this.entriesTableModel.domainModelChanged();
+        }
     }
 
 }

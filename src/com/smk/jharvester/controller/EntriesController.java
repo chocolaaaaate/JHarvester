@@ -24,6 +24,11 @@ public class EntriesController extends Observable {
         this.entries = new ArrayList<>();
     }
 
+    /**
+     * Starts an auto-update thread in the background that checks every 10 seconds if any entries are due for a refresh
+     * (i.e. re-fetching data at that entry's URL and XPath). Updates observers of changes.
+     * Thread scheduled using the {@link ScheduledExecutorService}
+     */
     public void startUpdateThread() {
         Runnable timerTask = new Runnable() {
             @Override
@@ -36,6 +41,8 @@ public class EntriesController extends Observable {
                             notifyObservers();
                         } catch (IOException ex) {
                             ex.printStackTrace();
+                            setChanged();
+                            notifyObservers(ex);
                         }
                     }
                 }
@@ -47,16 +54,24 @@ public class EntriesController extends Observable {
     }
 
 
+    /**
+     * Returns the current list of entries maintained by this controller.
+     */
     public List<Entry> getAllEntries() {
         return this.entries;
     }
 
+    /**
+     * Create an Entry and add it to the collection of entries maintained by this controller. For parameter information, see @{@link Entry} constructor.
+     * @return the created Entry
+     * @throws FailingHttpStatusCodeException
+     * @throws IOException
+     */
     public Entry createEntry(String label, String url, String xPath,
                              int updateFrequency)
             throws FailingHttpStatusCodeException, IOException {
 
         synchronized (entries) {
-            System.out.println("in synchronized block to create entry");
             Entry newEntry = new Entry(label, url, xPath, updateFrequency);
             this.entries.add(newEntry);
             setChanged();
@@ -65,9 +80,13 @@ public class EntriesController extends Observable {
         }
     }
 
+    /**
+     * Delete Entry at the given index.
+     * @param index 0 based.
+     * @return the deleted Entry.
+     */
     public Entry deleteEntry(int index) {
         synchronized (entries) {
-            System.out.println("in synchronized block to delete entry");
             Entry removed = this.entries.remove(index);
             setChanged();
             notifyObservers();
